@@ -14,3 +14,7 @@ Currently, three Larva Taggers are supported:
 ## Usage
 An example:
 ```python ParameterOptimization.py MWT```
+
+### Target Number File
+The target number file is a .csv file containing the target number of worms for each video. The file has to be in the following format:
+```csv Hi```
