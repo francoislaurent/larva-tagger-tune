@@ -10,14 +10,6 @@ import argparse
 import joblib
 
 
-# ================================
-# Example Usage (insert space whenever there is a new line):
-# python Hyperparameter_Optimization_V3_cli.py
-# WF-NTP '/Users/lillymay/Documents'
-# '/Users/lillymay/OneDrive/Dokumente/02_Arbeit/Masson_Lab/Larvae_Tracking_Benchmarking/Data/ffv1' A1_2022-07-12-150920-0000_ffv1.avi,A2_2022-07-07-153918-0000_ffv1.avi
-# 12,20
-# ===============================================
-
 def list_of_strings(arg):
     return arg.split(',')
 
@@ -26,17 +18,22 @@ def list_of_ints(arg):
     return [int(x) for x in arg.split(',')]
 
 
+# Converts the csv file with the target number of larvae to a dictionary
 def csv_file_to_dict(arg):
     target_nr_dict = {}
     with open(arg, 'r') as file:
         lines = file.readlines()[1:]  # Skip the first line
         for line in lines:
+            # Replace ; with , to make it compatible with the German csv file #TODO: make this more general
             if ',' not in line:
-                line = line.replace(';', ',')  # Adation to German csv file #TODO: make this more general
+                line = line.replace(';', ',')
+
             row = line.strip().split(',')
-            # Remove all '' from the list
+
+            # Remove all '' from the list, which occur because of different row lengths
             row = [x for x in row if x != '']
 
+            # Create a list for each video, which contains tuples of (time, target_nr) values
             target_nr_dict[row[0]] = []
             for i in range(1, len(row), 2):
                 # Append a tuple of (time, target_nr) to the list
@@ -61,7 +58,8 @@ parser.add_argument('--video_names', type=list_of_strings,
 parser.add_argument('--fps', type=int, default=30,
                     help='Frame rate of the videos.')
 parser.add_argument('--downsampled_fps', type=int,
-                    help='For WF-NTP, there is the option to downsample the videos to a lower frame rate to speed up processing.')
+                    help='For WF-NTP, there is the option to downsample the '
+                         'videos to a lower frame rate to speed up processing.')
 parser.add_argument('--plot', action='store_true',
                     help='Plot the number of detected larvae over time for each hyperparameter set.')
 parser.add_argument('--nr_trials', type=int, default=100)
@@ -76,13 +74,15 @@ args = parser.parse_args()
 
 
 # Plot number of detected larvae over time
-def plot_nr_detected_larvae(working_dir, date_time, dataframe, tracker, video_id,
-                            video_nr):
+def plot_nr_detected_larvae(working_dir, date_time, dataframe, tracker, video_id):
     plt.figure(figsize=(5, 3))
+
+    # Get number of detected larvae for each time point
     if tracker == 'MWT' or tracker == 'TIERPSY':
         dataframe.groupby('time').larva_id.nunique().plot()
     elif tracker == 'WF-NTP':
         dataframe.groupby('time').particle.nunique().plot()
+
     # Plot target number of larvae
     x, y = [], []
     for target_time, target_nr in args.target_larvae_nr[video_id]:
@@ -92,20 +92,24 @@ def plot_nr_detected_larvae(working_dir, date_time, dataframe, tracker, video_id
     y.append(args.target_larvae_nr[video_id][-1][1])
     plt.plot(x, y, color='r', linestyle='--', label='Target Number')
 
+    # Format plot
     plt.gca().set_ylim(bottom=0)
     plt.xlabel('Time in Seconds')
     plt.ylabel('Number of Detected Larvae')
     plt.title(video_id)
     plt.legend()
+
+    # Save plot
     save_path = os.path.join(working_dir, 'data', 'Optuna', video_id, date_time, f'nr_larvae_tracked_{video_id}.png')
     plt.savefig(save_path, dpi=120, bbox_inches='tight')
     plt.close()
 
 
-def get_nr_detected_larvae_from_tracks(track_path, working_dir, date_time, tracker,
-                                       video_id, video_nr):  # parameters
+# Processed the different output files of the trackers to get the number of detected larvae for each time point
+def get_nr_detected_larvae_from_tracks(track_path, working_dir, date_time, tracker, video_id, video_nr):
     # track_path can be a spine file (for MWT and Tierpsy) or a track.p file (for WF-NTP)
     if tracker == 'MWT' or tracker == 'TIERPSY':
+        # Save content of spine file (MWT and Tierpsy output) in a pandas dataframe
         spine_df = pd.read_csv(track_path, sep=' ', header=None)
         columns_points = []
         for i in range(1, 12):
@@ -113,7 +117,7 @@ def get_nr_detected_larvae_from_tracks(track_path, working_dir, date_time, track
         spine_df.columns = ['date_time', 'larva_id', 'time'] + columns_points
 
         if args.plot:
-            plot_nr_detected_larvae(working_dir, date_time, spine_df, tracker, video_id, video_nr)
+            plot_nr_detected_larvae(working_dir, date_time, spine_df, tracker, video_id)
         return spine_df.groupby('time').larva_id.nunique()
 
     elif tracker == 'WF-NTP':
@@ -124,10 +128,11 @@ def get_nr_detected_larvae_from_tracks(track_path, working_dir, date_time, track
         df['time'] = df['frame'] / args.fps
 
         if args.plot:
-            plot_nr_detected_larvae(working_dir, date_time, df, tracker, video_id, video_nr)
+            plot_nr_detected_larvae(working_dir, date_time, df, tracker, video_id)
         return df.groupby('time').particle.nunique()
 
 
+# Get hyperparameters for the tracker that should be optimized using optuna
 def get_hyperparameters(trial, tracker):
     date_time = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     if tracker == 'MWT':
@@ -140,7 +145,6 @@ def get_hyperparameters(trial, tracker):
                        f'--size-thresholds {size_thr1} {size_thr2} --pixel-size 0.073 '
                        f'--date-time {date_time}').split(' ')
     elif tracker == 'TIERPSY':
-        # Only the parameters part of the GUI to set the parameters are included here
         mask_min_area = trial.suggest_int('mask-min-area', 0, 100)  # 1, 50
         mask_max_area = trial.suggest_int('mask-max-area', mask_min_area, 10000)  # 1e8
         thresh_C = trial.suggest_int('thresh-C', 0, 100)  # 10,20
@@ -151,11 +155,11 @@ def get_hyperparameters(trial, tracker):
 
         hyperparams = (f'--frame-rate {args.fps} --mask-min-area {mask_min_area} --mask-max-area {mask_max_area} '
                        f'--strel-size {strel_size} --worm-bw-thresh-factor {worm_bw_thresh_factor} '
-                       f'--thresh-block-size {thresh_block_size} --dilation-size {dilation_size} --thresh-C {thresh_C} '
-                       f'--pixel-size 0.073 --date-time {date_time}').split(' ')
+                       f'--thresh-block-size {thresh_block_size} --dilation-size {dilation_size} '
+                       f'--thresh-C {thresh_C} --pixel-size 0.073 --date-time {date_time}').split(' ')
 
     elif tracker == 'WF-NTP':
-        # The hyperparameters that appear in the paper in Figure 11 are included here
+        # The hyperparameters that appear in the WF-NTP paper in Figure 11 are included here
         threshold = trial.suggest_int('threshold', 1, 20)
         opening = trial.suggest_int('opening', 1, 5)
         closing = trial.suggest_int('closing', 1, 5)
@@ -167,12 +171,13 @@ def get_hyperparameters(trial, tracker):
                        f'--closing {closing} --min_size {min_size} --max_size {max_size} --minimum_ecc {minimum_ecc} '
                        f'--skeletonize True --do_full_prune True').split(' ')
 
+        # Add downsampling option if specified via command line
         if args.downsampled_fps is not None:
             print(f'Downsampling videos to {args.downsampled_fps} fps')
             hyperparams.extend(f'--downsampled_fps {args.downsampled_fps}'.split(' '))
+
+            # Adjust frame rate for WF-NTP for correct downstream processing
             args.fps = args.downsampled_fps
-    else:
-        raise ValueError('Tracker not supported')
     return hyperparams, date_time
 
 
@@ -180,6 +185,7 @@ def analyze_one_video(video_path, hyperparams, working_dir, date_time, video_nr,
     video_id = os.path.basename(video_path).split('.')[0]
     print('Analyzing video: ', video_id)
 
+    # Get the basic command for the specified tracker
     # For all trackers, the output directory is of the form: data/Optuna/VIDEO_ID/DATE_TIME
     if args.tracker == 'MWT':
         command = ['julia', '--project=.', f'src/{args.tracker.lower()}-cli.jl', video_path,
@@ -209,8 +215,7 @@ def analyze_one_video(video_path, hyperparams, working_dir, date_time, video_nr,
         elif args.tracker == 'WF-NTP':
             spine_file_name = f'{video_id}_downsampled_track.p' if args.downsampled_fps != -1 else f'{video_id}_track.p'
 
-        # target_larvae_nr = args.target_larvae_nr_list if args.target_larvae_nr_list != None else args.target_larvae_nr_dict
-
+        # Get number of detected larvae from output tracks
         nr_larvae_tracked = get_nr_detected_larvae_from_tracks(
             f'{working_dir}/data/Optuna/{video_id}/{date_time}/{spine_file_name}', working_dir, date_time, args.tracker,
             video_id, video_nr)
@@ -220,23 +225,25 @@ def analyze_one_video(video_path, hyperparams, working_dir, date_time, video_nr,
         print('Exception when using hyperparameters: ', hyperparams, '\nTrying next set of hyperparameters...')
         raise optuna.TrialPruned()
 
-    # calculate error for this video
+    # Calculate error for this video
     video_error = calculate_error(nr_larvae_tracked, video_id)
 
+    # Handle pruning if specified via command line
     if args.prune:
         # Report intermedidate error
         trial.report(video_error, video_nr)
 
-        # Handle pruning based on the error for the current video
+        # The current trial is pruned if the error is too high
         if trial.should_prune():
             print('Pruning trial because of high error for one video: ', video_error)
             raise optuna.TrialPruned()
-
     return video_error
 
 
+# Calculate the mean deviation of the detected number of larvae from the target number of larvae
 def calculate_error(nr_larvae_tracked, video_id):
     target_nr_list = args.target_larvae_nr[video_id]
+
     cumulative_error = 0.0
     current_target_nr = np.Inf
     for time, detected_larvae in nr_larvae_tracked.items():
@@ -278,11 +285,11 @@ def main():
     if args.video_names is None:
         args.video_names = os.listdir(args.video_dir)
 
-
     if len(args.video_names) != len(args.target_larvae_nr.keys()):
         for video_name in args.video_names:
             if video_name.replace('.avi', '') not in args.target_larvae_nr.keys():
-                raise ValueError(f'Video name {video_name.replace(".avi", "")} not found in target number of larvae dictionary.')
+                raise ValueError(
+                    f'Video name {video_name.replace(".avi", "")} not found in target number of larvae dictionary.')
         # Filter dictionary to only include videos that are used for optimization
         args.target_larvae_nr = {k: v for k, v in args.target_larvae_nr.items() if k in args.video_names}
 
