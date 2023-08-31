@@ -4,17 +4,62 @@
 This project is part of the Larva Tagger Project, aiming to monitor the behavior of Drosophila Larvae in video
 recordings. This repository contains the code for the autimated hyperparameter optimization of the Larva Tagger.
 Currently, three Larva Taggers are supported:
-- MWT (Multi-Worm Tracker, [Paper](https://doi.org/10.1038%2Fnmeth.1625), [Code](https://gitlab.com/larvataggerpipelines/mwt-cli))
-- Tierpsy ([Paper](https://doi.org/10.1038%2Fs41592-018-0112-1), [Code](https://gitlab.com/larvataggerpipelines/tierpsy-cli))
-- WF-NTP (Wide field-of-view Nematode Tracking Platform, [Paper](https://doi.org/10.1038/s41596-020-0321-9), [Code]())
+- MWT (Multi-Worm Tracker, [Paper](https://doi.org/10.1038%2Fnmeth.1625))
+- Tierpsy ([Paper](https://doi.org/10.1038%2Fs41592-018-0112-1))
+- WF-NTP (Wide field-of-view Nematode Tracking Platform, [Paper](https://doi.org/10.1038/s41596-020-0321-9))
 
 ## Installation
+Requires the Tracker that should be used for the optimization to be installed. 
+We tested the code with the MWT, Tierpsy and WF-NTP.
+We used the following versions of the respective Trackers which all come with installation instructions:
+- MWT: [GitLab Repo](https://gitlab.com/larvataggerpipelines/mwt-cli)
+- Tierpsy: [GitLab Repo](https://gitlab.com/larvataggerpipelines/tierpsy-cli)
+- WF-NTP: [GitHub Repo](TODO)
+
+The code was tested using a conda environment with Python 3.10.12. We tested it on MacOs and Windows machines.
+
+The following packages are required:
+multiprocessing, matplotlib.pyplot, numpy, pandas, os, optuna, 
+datetime, subprocess, argparse, joblib
 
 
 ## Usage
-An example:
-```python ParameterOptimization.py MWT```
+The code can be run from the command line. An example call is:
+
+```
+python ParameterOptimization.py MWT /Path/to/WorkingDir /Path/to/VideoDir /Path/to/target_larvae_nr.csv --plot --nr_processes 3
+```
+
+The script requires four positional arguments:
+- Tracker: The tracker that should be used for the optimization. Currently, MWT, Tierpsy and WF-NTP are supported.
+- WorkingDir: The path to the working directory. This directory is expected to have a subdirectory TRACKER-cli with 
+the respective tracker installation.
+- VideoDir: The path to the directory containing the videos that should be analyzed.
+- TargetFile: The path to the .csv file containing the target number of larvae for each video 
+(see below for detailed description).
+
+Additionally, the optimization process can be customized by specifying optional arguments. 
+You can get a list and description of all optional arguments by calling:
+```
+python ParameterOptimization.py --help
+```
+
 
 ### Target Number File
-The target number file is a .csv file containing the target number of worms for each video. The file has to be in the following format:
-```csv```
+The target number file is a .csv file containing the target number of worms for each video. Since is it possible that 
+larvae leave the frame during the video recording, the target number of larvae can change over time. Therefore, the 
+target number file contains the target number of larvae for each second of the video.
+
+The file has to be in the following csv format (first visualized as table, then as csv):
+
+| Video_name                             | Second | Nr_larvae | Second | Nr_larvae | Second | Nr_larvae |
+|----------------------------------------|--------|-----------|--------|-----------|--------|-----------|
+| A1DF31_A1_2022-07-12-150920-0000_ffv1  | 0      | 12        | 32     | 11        | 44     | 10        |
+| A1DF39_B1_2022-07-12-185350-0000_ffv1  | 0      | 11        | 52     | 10        |
+
+As csv:
+```
+Video_name,Second,Nr_larvae,Second,Nr_larvae,Second,Nr_larvae
+A1DF31_A1_2022-07-12-150920-0000_ffv1,0,12,32,11,44,10
+A1DF39_B1_2022-07-12-185350-0000_ffv1,0,11,52,10
+```

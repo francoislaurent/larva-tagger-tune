@@ -242,37 +242,51 @@ def analyze_one_video(video_path, hyperparams, working_dir, date_time, video_nr,
 
 # Calculate the mean deviation of the detected number of larvae from the target number of larvae
 def calculate_error(nr_larvae_tracked, video_id):
+    # Get target number of larvae for this video
     target_nr_list = args.target_larvae_nr[video_id]
 
     cumulative_error = 0.0
     current_target_nr = np.Inf
+    # Calculate cumulative error over the entire video
     for time, detected_larvae in nr_larvae_tracked.items():
+        # For one time point in the output track file, get the target number of larvae
         for target_time, target_nr in target_nr_list:
             if time >= target_time:
                 current_target_nr = target_nr
             elif time < target_time:
                 break
+
+        # Add the error for this time point (the deviation of the detected number of larvae from the actual number)
+        # to the cumulative error
         cumulative_error += abs(detected_larvae - current_target_nr) / current_target_nr
+
+    # Average the cumulative error over the entire video to get the mean error
     return cumulative_error / len(nr_larvae_tracked)
 
 
+# Objective function for optuna
 def objective(trial):
+    # Get hyperparameters for this trial
     hyperparams, date_time = get_hyperparameters(trial, args.tracker)
 
     video_paths = [os.path.join(args.video_dir, video_name) for video_name in list(args.video_names)]
     working_dir = f'{args.working_dir}/{args.tracker.lower()}-cli'
 
     total_error = 0.0
+    # Create a list of running parameters for each video so that they can be run in parallel
     parallel_run_params = [(current_video_path, hyperparams, working_dir, date_time, video_nr, trial) for
                            video_nr, current_video_path in enumerate(video_paths)]
 
     # Run tracker on videos in parallel, using the number or parallel processes specified in args.nr_processes
-    with multiprocessing.Pool(processes=args.nr_processes) as pool:  # len(video_paths)
+    with multiprocessing.Pool(processes=args.nr_processes) as pool:
+        # Each process returns the error for one video
         errors = pool.starmap(analyze_one_video, parallel_run_params)
 
+    # Calculate the cumulative error over all videos
     for video_error in errors:
         total_error += video_error
 
+    # Return the mean error over all videos, representing the mean error for that set of hyperparameters
     return total_error / len(video_paths)
 
 
@@ -285,6 +299,8 @@ def main():
     if args.video_names is None:
         args.video_names = os.listdir(args.video_dir)
 
+    # If necessary, filter video names to only include videos that are used for optimization
+    # and make sure no video is missing
     if len(args.video_names) != len(args.target_larvae_nr.keys()):
         for video_name in args.video_names:
             if video_name.replace('.avi', '') not in args.target_larvae_nr.keys():
