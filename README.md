@@ -63,3 +63,13 @@ Video_name,Second,Nr_larvae,Second,Nr_larvae,Second,Nr_larvae
 A1DF31_A1_2022-07-12-150920-0000_ffv1,0,12,32,11,44,10
 A1DF39_B1_2022-07-12-185350-0000_ffv1,0,11,52,10
 ```
+The tuple (Second, Nr_larvae) can be repeated as often as needed. Rows do not need to have the same number of columns.
+If the target number of larvae is constant over the whole video, the file can be simplified by simply specifying the 
+Second 0 and the target number of larvae once, so that the csv file has 3 column in total.
+
+## About the Algorithm
+The optimization algorithm is based on the Optuna framework, which is commonly used for hyperparameter optimization 
+for neural networks. It suggests a set of hyperparameters, which are then used to run the tracker on the videos. 
+Testing one set of hyperparameters is called a trial. 
+Based on results from previous trials, Optuna will suggest new hyperparameters to test.
+Additionally, optuna has an option to prune unpromising trials, which can be activated by setting the flag "--prune".
