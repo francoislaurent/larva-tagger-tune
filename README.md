@@ -14,7 +14,7 @@ We tested the code with the MWT, Tierpsy and WF-NTP.
 We used the following versions of the respective Trackers which all come with installation instructions:
 - MWT: [GitLab Repo](https://gitlab.com/larvataggerpipelines/mwt-cli)
 - Tierpsy: [GitLab Repo](https://gitlab.com/larvataggerpipelines/tierpsy-cli)
-- WF-NTP: [GitHub Repo](TODO)
+- WF-NTP: [GitHub Repo](https://github.com/Lilly-May/wf-ntp-cli)
 
 The code was tested using a conda environment with Python 3.10.12. We tested it on MacOs and Windows machines.
 
@@ -46,7 +46,7 @@ python ParameterOptimization.py --help
 
 
 ### Target Number File
-The target number file is a .csv file containing the target number of worms for each video. Since is it possible that 
+The target number file is a .csv file containing the target number of larvae for each video. Since is it possible that 
 larvae leave the frame during the video recording, the target number of larvae can change over time. Therefore, the 
 target number file contains the target number of larvae for each second of the video.
 
