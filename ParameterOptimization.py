@@ -69,12 +69,13 @@ parser.add_argument('--debug', action='store_true', help='Print debug informatio
 parser.add_argument('--prune', action='store_true',
                     help='Useful if you have more videos than processes, as it will prune unpromising trials after '
                          'processing the first video.')
+parser.add_argument('--output_dir', help='Directory for Optuna study file.')
 
 args = parser.parse_args()
 
 
 # Plot number of detected larvae over time
-def plot_nr_detected_larvae(working_dir, date_time, dataframe, tracker, video_id):
+def plot_nr_detected_larvae(output_dir, date_time, dataframe, tracker, video_id):
     plt.figure(figsize=(5, 3))
 
     # Get number of detected larvae for each time point
@@ -100,13 +101,13 @@ def plot_nr_detected_larvae(working_dir, date_time, dataframe, tracker, video_id
     plt.legend()
 
     # Save plot
-    save_path = os.path.join(working_dir, 'data', 'Optuna', video_id, date_time, f'nr_larvae_tracked_{video_id}.png')
+    save_path = os.path.join(output_dir, video_id, date_time, f'nr_larvae_tracked_{video_id}.png')
     plt.savefig(save_path, dpi=120, bbox_inches='tight')
     plt.close()
 
 
 # Processed the different output files of the trackers to get the number of detected larvae for each time point
-def get_nr_detected_larvae_from_tracks(track_path, working_dir, date_time, tracker, video_id, video_nr):
+def get_nr_detected_larvae_from_tracks(track_path, output_dir, date_time, tracker, video_id, video_nr):
     # track_path can be a spine file (for MWT and Tierpsy) or a track.p file (for WF-NTP)
     if tracker == 'MWT' or tracker == 'TIERPSY':
         # Save content of spine file (MWT and Tierpsy output) in a pandas dataframe
@@ -117,7 +118,7 @@ def get_nr_detected_larvae_from_tracks(track_path, working_dir, date_time, track
         spine_df.columns = ['date_time', 'larva_id', 'time'] + columns_points
 
         if args.plot:
-            plot_nr_detected_larvae(working_dir, date_time, spine_df, tracker, video_id)
+            plot_nr_detected_larvae(output_dir, date_time, spine_df, tracker, video_id)
         return spine_df.groupby('time').larva_id.nunique()
 
     elif tracker == 'WF-NTP':
@@ -128,7 +129,7 @@ def get_nr_detected_larvae_from_tracks(track_path, working_dir, date_time, track
         df['time'] = df['frame'] / args.fps
 
         if args.plot:
-            plot_nr_detected_larvae(working_dir, date_time, df, tracker, video_id)
+            plot_nr_detected_larvae(output_dir, date_time, df, tracker, video_id)
         return df.groupby('time').particle.nunique()
 
 
@@ -181,21 +182,27 @@ def get_hyperparameters(trial, tracker):
     return hyperparams, date_time
 
 
-def analyze_one_video(video_path, hyperparams, working_dir, date_time, video_nr, trial):
+def analyze_one_video(video_path, hyperparams, working_dir, output_dir, date_time, video_nr, trial):
     video_id = os.path.basename(video_path).split('.')[0]
     print('Analyzing video: ', video_id)
 
+    # If output_dir is not defined, for all trackers, the output directory is of the form:
+    #   data/Optuna/VIDEO_ID/DATE_TIME
+    # Variable output_dir refers to the data/Optuna part.
+    # If output_dir is defined, it should be an absolute path like the other directories.
+    if output_dir is None:
+        f'./data/Optuna'
+
     # Get the basic command for the specified tracker
-    # For all trackers, the output directory is of the form: data/Optuna/VIDEO_ID/DATE_TIME
     if args.tracker == 'MWT':
         command = ['julia', '--project=.', f'src/{args.tracker.lower()}-cli.jl', video_path,
-                   f'./data/Optuna/{video_id}']
+                   f'{output_dir}/{video_id}']
     elif args.tracker == 'TIERPSY':
         command = ['julia', '--project=.', f'src/{args.tracker.lower()}-cli.jl', video_path,
-                   f'./data/Optuna/{video_id}/{date_time}']
+                   f'{output_dir}/{video_id}/{date_time}']
     elif args.tracker == 'WF-NTP':
         os.makedirs(f'{working_dir}/data/Optuna/{video_id}/{date_time}')
-        command = ['python', f'{working_dir}/src/wf_ntp_cli.py', video_path, f'./data/Optuna/{video_id}/{date_time}']
+        command = ['python', f'{working_dir}/src/wf_ntp_cli.py', video_path, f'{output_dir}/{video_id}/{date_time}']
     command.extend(hyperparams)
 
     try:  # Bad Hyperparameter sets can cause errors, so we need to catch them and prune the trial
@@ -216,8 +223,10 @@ def analyze_one_video(video_path, hyperparams, working_dir, date_time, video_nr,
             spine_file_name = f'{video_id}_downsampled_track.p' if args.downsampled_fps != -1 else f'{video_id}_track.p'
 
         # Get number of detected larvae from output tracks
+        if not os.path.isabs(output_dir):
+            output_dir = f'{working_dir}/{output_dir}'
         nr_larvae_tracked = get_nr_detected_larvae_from_tracks(
-            f'{working_dir}/data/Optuna/{video_id}/{date_time}/{spine_file_name}', working_dir, date_time, args.tracker,
+            f'{output_dir}/{video_id}/{date_time}/{spine_file_name}', output_dir, date_time, args.tracker,
             video_id, video_nr)
 
     except:
@@ -274,7 +283,7 @@ def objective(trial):
 
     total_error = 0.0
     # Create a list of running parameters for each video so that they can be run in parallel
-    parallel_run_params = [(current_video_path, hyperparams, working_dir, date_time, video_nr, trial) for
+    parallel_run_params = [(current_video_path, hyperparams, working_dir, args.output_dir, date_time, video_nr, trial) for
                            video_nr, current_video_path in enumerate(video_paths)]
 
     # Run tracker on videos in parallel, using the number or parallel processes specified in args.nr_processes
@@ -311,8 +320,10 @@ def main():
 
     print(f'Number of videos included in optimization: {len(args.video_names)}')
 
-    if not os.path.exists(f'{args.working_dir}/{args.tracker.lower()}-cli/data/Optuna'):
-        os.mkdir(f'{args.working_dir}/{args.tracker.lower()}-cli/data/Optuna')
+    output_dir = args.output_dir
+    if output_dir is None:
+        output_dir = f'{args.working_dir}/{args.tracker.lower()}-cli/data/Optuna'
+    os.makedirs(output_dir)
 
     # Create optuna study and optimize hyperparameters
     study = optuna.create_study(direction='minimize', study_name=f'Parameter_Optimization_{args.tracker}')
@@ -320,9 +331,9 @@ def main():
 
     # Save study and results
     date_time = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    joblib.dump(study, f'{args.working_dir}/{args.tracker.lower()}-cli/data/Optuna/{study.study_name}_{date_time}.pkl')
+    joblib.dump(study, f'{output_dir}/{study.study_name}_{date_time}.pkl')
     df = study.trials_dataframe()
-    df.to_csv(f'{args.working_dir}/{args.tracker.lower()}-cli/data/Optuna/{study.study_name}_{date_time}.csv')
+    df.to_csv(f'{output_dir}/{study.study_name}_{date_time}.csv')
 
 
 if __name__ == "__main__":
