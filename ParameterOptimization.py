@@ -201,7 +201,7 @@ def analyze_one_video(video_path, hyperparams, working_dir, output_dir, date_tim
         command = ['julia', '--project=.', f'src/{args.tracker.lower()}-cli.jl', video_path,
                    f'{output_dir}/{video_id}/{date_time}']
     elif args.tracker == 'WF-NTP':
-        os.makedirs(f'{working_dir}/data/Optuna/{video_id}/{date_time}')
+        os.makedirs(f'{output_dir}/{video_id}/{date_time}')
         command = ['python', f'{working_dir}/src/wf_ntp_cli.py', video_path, f'{output_dir}/{video_id}/{date_time}']
     command.extend(hyperparams)
 
