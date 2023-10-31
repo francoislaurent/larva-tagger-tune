@@ -205,7 +205,10 @@ def analyze_one_video(video_path, hyperparams, working_dir, date_time, video_nr,
             out, err = subprocess.DEVNULL, subprocess.DEVNULL
 
         # Run tracker for one video from working directory
-        subprocess.run(command, cwd=working_dir, stdout=out, stderr=err)
+        ret = subprocess.run(command, cwd=working_dir, stdout=out, stderr=err)
+
+        if args.debug and ret.stderr:
+            print(ret.stderr.decode('utf8'))
 
         # Each tracker has a different name for the file that contains the tracks, so we need to handle this
         if args.tracker == 'MWT':
