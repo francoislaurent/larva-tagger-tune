@@ -73,7 +73,7 @@ parser.add_argument('--prune', action='store_true',
 args = parser.parse_args()
 
 args.target_larvae_nr = csv_file_to_dict(args.target_larvae_nr)
-assert list_of_strings(args.video_names)
+args.video_names = list_of_strings(args.video_names)
 
 
 # Plot number of detected larvae over time
