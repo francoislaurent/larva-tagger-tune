@@ -48,11 +48,11 @@ parser.add_argument('tracker', help='Tracker that should be used. Select between
 parser.add_argument('working_dir', help='Working directory is expected to have a subdirectory named '
                                         'TRACKER-cli for the tracker that is supposed to be used')
 parser.add_argument('video_dir', help='Path to the directory in which all video files lie in')
-parser.add_argument('target_larvae_nr', type=csv_file_to_dict,
+parser.add_argument('target_larvae_nr',
                     help='Provide a csv file with the target number of larvae to detect in each video.')
 
 # Optional arguments
-parser.add_argument('--video_names', type=list_of_strings,
+parser.add_argument('--video_names',
                     help='If you do not want to use all videos in the provided video directory, you can specify a list '
                          'of video names (including extension) that should be used for the optimization.')
 parser.add_argument('--fps', type=int, default=30,
@@ -71,6 +71,9 @@ parser.add_argument('--prune', action='store_true',
                          'processing the first video.')
 
 args = parser.parse_args()
+
+args.target_larvae_nr = csv_file_to_dict(args.target_larvae_nr)
+assert list_of_strings(args.video_names)
 
 
 # Plot number of detected larvae over time
