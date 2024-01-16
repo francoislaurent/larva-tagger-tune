@@ -191,7 +191,7 @@ def analyze_one_video(video_path, hyperparams, working_dir, output_dir, date_tim
     # Variable output_dir refers to the data/Optuna part.
     # If output_dir is defined, it should be an absolute path like the other directories.
     if output_dir is None:
-        f'./data/Optuna'
+        output_dir = f'./data/Optuna'
 
     # Get the basic command for the specified tracker
     if args.tracker == 'MWT':
