@@ -307,7 +307,7 @@ def main():
                 raise ValueError(
                     f'Video name {video_name.replace(".avi", "")} not found in target number of larvae dictionary.')
         # Filter dictionary to only include videos that are used for optimization
-        args.target_larvae_nr = {k: v for k, v in args.target_larvae_nr.items() if k in args.video_names}
+        args.target_larvae_nr = {k: v for k, v in args.target_larvae_nr.items() if f'{k}.avi' in args.video_names}
 
     print(f'Number of videos included in optimization: {len(args.video_names)}')
 
