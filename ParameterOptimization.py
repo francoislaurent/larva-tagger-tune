@@ -70,6 +70,7 @@ parser.add_argument('--prune', action='store_true',
                     help='Useful if you have more videos than processes, as it will prune unpromising trials after '
                          'processing the first video.')
 parser.add_argument('--output_dir', help='Directory for Optuna study file.')
+parser.add_argument('--static-args', help='Constant arguments to the tracker (pass them quoted).', default='')
 
 args = parser.parse_args()
 
@@ -182,6 +183,9 @@ def get_hyperparameters(trial, tracker):
 
             # Adjust frame rate for WF-NTP for correct downstream processing
             args.fps = args.downsampled_fps
+
+    if args.static_args:
+        hyperparams.extend(args.static_args.split(' '))
     return hyperparams, date_time
 
 
