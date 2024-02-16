@@ -185,7 +185,7 @@ def get_hyperparameters(trial, tracker):
             args.fps = args.downsampled_fps
 
     if args.static_args:
-        hyperparams.extend(args.static_args.split(' '))
+        hyperparams.extend(args.static_args.strip('\'"').split())
     return hyperparams, date_time
 
 
