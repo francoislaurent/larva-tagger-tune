@@ -1,22 +1,22 @@
 # larva-tagger-tune
 
 ## Project Description
-This project is part of the Larva Tagger Project, aiming to monitor the behavior of Drosophila Larvae in video
-recordings. This repository contains the code for the autimated hyperparameter optimization of the Larva Tagger.
-Currently, three Larva Taggers are supported:
+This project is part of the [LarvaTagger](https://gitlab.pasteur.fr/nyx/larvatagger.jl) project, aiming to monitor the behavior of *Drosophila* larvae in video recordings.
+This repository contains the code for the automated hyper-parameter optimization of larva tracker.
+Currently, three trackers are supported:
 - MWT (Multi-Worm Tracker, [Paper](https://doi.org/10.1038%2Fnmeth.1625))
-- Tierpsy ([Paper](https://doi.org/10.1038%2Fs41592-018-0112-1))
-- WF-NTP (Wide field-of-view Nematode Tracking Platform, [Paper](https://doi.org/10.1038/s41596-020-0321-9))
+- Tierpsy Tracker ([Paper](https://doi.org/10.1038%2Fs41592-018-0112-1))
+- WF-NTP (Wide Field-of-view Nematode Tracking Platform, [Paper](https://doi.org/10.1038/s41596-020-0321-9))
 
 ## Installation
-Requires the Tracker that should be used for the optimization to be installed.
-We tested the code with the MWT, Tierpsy and WF-NTP.
-We used the following versions of the respective Trackers which all come with installation instructions:
+Requires the tracker that should be used for the optimization to be installed.
+We tested the code with the MWT, Tierpsy Tracker and WF-NTP.
+We used the following versions of the respective trackers which all come with installation instructions:
 - MWT: [GitLab Repo](https://gitlab.com/larvataggerpipelines/mwt-cli)
-- Tierpsy: [GitLab Repo](https://gitlab.com/larvataggerpipelines/tierpsy-cli)
+- Tierpsy Tracker: [GitLab Repo](https://gitlab.com/larvataggerpipelines/tierpsy-cli)
 - WF-NTP: [GitHub Repo](https://github.com/Lilly-May/wf-ntp-cli)
 
-The code was tested using a conda environment with Python 3.10.12. We tested it on MacOs and Windows machines.
+The code was tested using a conda environment with Python 3.10.12. We tested it on MacOS and Windows machines.
 
 The following packages are required:
 matplotlib, numpy, pandas, optuna, joblib
@@ -41,7 +41,7 @@ python ParameterOptimization.py MWT /Path/to/WorkingDir /Path/to/VideoDir /Path/
 ```
 
 The script requires four positional arguments:
-- Tracker: The tracker that should be used for the optimization. Currently, MWT, Tierpsy and WF-NTP are supported.
+- Tracker: The tracker that should be used for the optimization. Currently, MWT, Tierpsy Tracker and WF-NTP are supported.
 - WorkingDir: The path to the working directory. This directory is expected to have a subdirectory TRACKER-cli with
 the respective tracker installation.
 - VideoDir: The path to the directory containing the videos that should be analyzed.
@@ -74,12 +74,12 @@ A1DF31_A1_2022-07-12-150920-0000_ffv1,0,12,32,11,44,10
 A1DF39_B1_2022-07-12-185350-0000_ffv1,0,11,52,10
 ```
 The tuple (Second, Nr_larvae) can be repeated as often as needed. Rows do not need to have the same number of columns.
-If the target number of larvae is constant over the whole video, the file can be simplified by simply specifying the
-Second 0 and the target number of larvae once, so that the csv file has 3 column in total.
+If the target number of larvae is constant over the whole video, the file can be simplified specifying the
+Second 0 and the target number of larvae once, so that the .csv file has 3 columns in total.
 
 ## About the Algorithm
-The optimization algorithm is based on the Optuna framework, which is commonly used for hyperparameter optimization
-for neural networks. It suggests a set of hyperparameters, which are then used to run the tracker on the videos.
-Testing one set of hyperparameters is called a trial.
-Based on results from previous trials, Optuna will suggest new hyperparameters to test.
-Additionally, optuna has an option to prune unpromising trials, which can be activated by setting the flag "--prune".
+The optimization algorithm is based on the Optuna framework, which is commonly used for hyper-parameter optimization
+for neural networks. It suggests a set of hyper-parameters, which are then used to run the tracker on the videos.
+Testing one set of hyper-parameters is called a trial.
+Based on results from previous trials, Optuna will suggest new hyper-parameters to test.
+Additionally, Optuna has an option to prune unpromising trials, which can be activated by setting the flag "--prune".
