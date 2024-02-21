@@ -55,11 +55,13 @@ parser.add_argument('target_larvae_nr',
 parser.add_argument('--video_names',
                     help='If you do not want to use all videos in the provided video directory, you can specify a list '
                          'of video names (including extension) that should be used for the optimization.')
-parser.add_argument('--fps', type=int, default=30,
+parser.add_argument('--fps', type=float, default=30,
                     help='Frame rate of the videos.')
 parser.add_argument('--downsampled_fps', type=int,
                     help='For WF-NTP, there is the option to downsample the '
                          'videos to a lower frame rate to speed up processing.')
+parser.add_argument('--pixel_size', type=float, default=0.073,
+                    help='Pixel size in mm.')
 parser.add_argument('--plot', action='store_true',
                     help='Plot the number of detected larvae over time for each hyperparameter set.')
 parser.add_argument('--nr_trials', type=int, default=100)
@@ -146,7 +148,7 @@ def get_hyperparameters(trial, tracker):
         size_thr2 = trial.suggest_int('size-thr2', 1, 100)
 
         hyperparams = (f'--frame-rate {args.fps} --pixel-thresholds {pixel_thr1} {pixel_thr2} '
-                       f'--size-thresholds {size_thr1} {size_thr2} --pixel-size 0.073 '
+                       f'--size-thresholds {size_thr1} {size_thr2} --pixel-size {args.pixel_size} '
                        f'--date-time {date_time}').split(' ')
     elif tracker == 'TIERPSY':
         mask_min_area = trial.suggest_int('mask-min-area', 0, 100)  # 1, 50
@@ -160,7 +162,7 @@ def get_hyperparameters(trial, tracker):
         hyperparams = (f'--frame-rate {args.fps} --mask-min-area {mask_min_area} --mask-max-area {mask_max_area} '
                        f'--strel-size {strel_size} --worm-bw-thresh-factor {worm_bw_thresh_factor} '
                        f'--thresh-block-size {thresh_block_size} --dilation-size {dilation_size} '
-                       f'--thresh-C {thresh_C} --pixel-size 0.073 --date-time {date_time}').split(' ')
+                       f'--thresh-C {thresh_C} --pixel-size {args.pixel_size} --date-time {date_time}').split(' ')
 
     elif tracker == 'WF-NTP':
         # The hyperparameters that appear in the WF-NTP paper in Figure 11 are included here
@@ -171,7 +173,7 @@ def get_hyperparameters(trial, tracker):
         max_size = trial.suggest_int('max-size', min_size, 3000)
         minimum_ecc = trial.suggest_float('minimum-ecc', 0.5, 1.0)
 
-        hyperparams = (f'--fps {args.fps} --px_to_mm 0.073 --threshold {threshold} --opening {opening} '
+        hyperparams = (f'--fps {args.fps} --px_to_mm {args.pixel_size} --threshold {threshold} --opening {opening} '
                        f'--closing {closing} --min_size {min_size} --max_size {max_size} --minimum_ecc {minimum_ecc} '
                        f'--skeletonize True --do_full_prune True').split(' ')
 
